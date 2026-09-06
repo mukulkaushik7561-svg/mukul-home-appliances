@@ -1,17 +1,13 @@
 import os
 import re
-import sqlite3
-from datetime import datetime, timezone
-from pathlib import Path
+from urllib.parse import urlencode
 
-from flask import Flask, abort, jsonify, render_template, request
+from flask import Flask, abort, jsonify, redirect, render_template, request
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_wtf import CSRFProtect
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-BASE_DIR = Path(__file__).resolve().parent
-DEFAULT_DATABASE = BASE_DIR / "data" / "enquiries.db"
 PHONE_RE = re.compile(r"^\+?[0-9][0-9 ()-]{6,18}[0-9]$")
 SERVICES = {"RO Installation", "RO Service", "AMC / Maintenance", "Support / General Enquiry", "Bio+ Bottle Enquiry"}
 
@@ -32,7 +28,6 @@ def create_app(test_config=None):
         SESSION_COOKIE_SAMESITE="Lax",
         SESSION_COOKIE_SECURE=os.environ.get("MUKUL_HTTPS", "0") == "1",
         WTF_CSRF_TIME_LIMIT=3600,
-        DATABASE=Path(os.environ.get("MUKUL_DATABASE", DEFAULT_DATABASE)),
     )
     if test_config:
         app.config.update(test_config)
@@ -48,8 +43,6 @@ def create_app(test_config=None):
         storage_uri=os.environ.get("RATELIMIT_STORAGE_URI", "memory://"),
     )
     app.limiter = limiter
-    init_database(app.config["DATABASE"])
-
     @app.after_request
     def security_headers(response):
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -98,16 +91,19 @@ def create_app(test_config=None):
         if not 10 <= len(message) <= 1000 or any(char in message for char in "<>\x00"):
             return validation_error("Please add a short message (10–1000 characters).")
 
-        db = sqlite3.connect(app.config["DATABASE"], timeout=5)
-        try:
-            db.execute(
-                "INSERT INTO enquiries (name, phone, service, message, created_at) VALUES (?, ?, ?, ?, ?)",
-                (name, phone, service, message, datetime.now(timezone.utc).isoformat()),
-            )
-            db.commit()
-        finally:
-            db.close()
-        return jsonify(success=True, message="Thank you. We will contact you shortly."), 201
+        whatsapp_message = "\n".join((
+            "Hello Mukul Home Appliances,",
+            "",
+            "I would like to make a service enquiry.",
+            f"Name: {name}",
+            f"Phone: {phone}",
+            f"Service: {service}",
+            f"Message: {message}",
+            "",
+            "Please contact me regarding this enquiry.",
+        ))
+        whatsapp_url = f"https://wa.me/919466667561?{urlencode({'text': whatsapp_message})}"
+        return redirect(whatsapp_url, code=303)
 
     @app.errorhandler(400)
     def bad_request(_error):
@@ -138,26 +134,6 @@ def clean_text(field, max_length):
 
 def validation_error(message):
     return jsonify(error=message), 400
-
-
-def init_database(database):
-    database = Path(database)
-    database.parent.mkdir(parents=True, exist_ok=True)
-    db = sqlite3.connect(database)
-    try:
-        db.execute("""
-            CREATE TABLE IF NOT EXISTS enquiries (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                phone TEXT NOT NULL,
-                service TEXT NOT NULL,
-                message TEXT NOT NULL,
-                created_at TEXT NOT NULL
-            )
-        """)
-        db.commit()
-    finally:
-        db.close()
 
 
 app = create_app()

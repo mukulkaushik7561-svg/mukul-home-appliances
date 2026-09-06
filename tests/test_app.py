@@ -1,26 +1,18 @@
 import re
-import sqlite3
-import tempfile
 import unittest
-from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 from app import create_app
 
 
 class WebsiteTests(unittest.TestCase):
     def setUp(self):
-        self.temp_dir = tempfile.TemporaryDirectory()
-        self.database = Path(self.temp_dir.name) / "test.db"
         self.app = create_app({
             "TESTING": True,
             "SECRET_KEY": "test-secret",
-            "DATABASE": self.database,
             "RATELIMIT_ENABLED": False,
         })
         self.client = self.app.test_client()
-
-    def tearDown(self):
-        self.temp_dir.cleanup()
 
     def csrf_token(self):
         html = self.client.get("/").get_data(as_text=True)
@@ -29,10 +21,10 @@ class WebsiteTests(unittest.TestCase):
     def valid_form(self):
         return {
             "csrf_token": self.csrf_token(),
-            "name": "Test Customer",
+            "name": "Test Customer & Family",
             "phone": "+91 9876543210",
             "service": "RO Service",
-            "message": "My purifier needs a routine service.",
+            "message": "Filter change & low water flow?",
             "website": "",
         }
 
@@ -47,15 +39,18 @@ class WebsiteTests(unittest.TestCase):
         response = self.client.post("/enquiry", data={})
         self.assertEqual(response.status_code, 400)
 
-    def test_valid_enquiry_is_stored(self):
+    def test_valid_enquiry_redirects_to_encoded_whatsapp_message(self):
         response = self.client.post("/enquiry", data=self.valid_form())
-        self.assertEqual(response.status_code, 201)
-        db = sqlite3.connect(self.database)
-        try:
-            row = db.execute("SELECT name, service FROM enquiries").fetchone()
-        finally:
-            db.close()
-        self.assertEqual(row, ("Test Customer", "RO Service"))
+        self.assertEqual(response.status_code, 303)
+        destination = urlparse(response.headers["Location"])
+        self.assertEqual(destination.scheme, "https")
+        self.assertEqual(destination.netloc, "wa.me")
+        self.assertEqual(destination.path, "/919466667561")
+        message = parse_qs(destination.query)["text"][0]
+        self.assertIn("Name: Test Customer & Family", message)
+        self.assertIn("Phone: +91 9876543210", message)
+        self.assertIn("Service: RO Service", message)
+        self.assertIn("Message: Filter change & low water flow?", message)
 
     def test_service_allowlist_and_honeypot(self):
         invalid = self.valid_form()

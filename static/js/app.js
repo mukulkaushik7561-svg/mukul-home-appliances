@@ -45,10 +45,10 @@ document.querySelectorAll('.enquiry-preset').forEach((button) => {
   });
 });
 
-form?.addEventListener('submit', async (event) => {
-  event.preventDefault();
+form?.addEventListener('submit', (event) => {
   form.querySelectorAll('.invalid').forEach((field) => field.classList.remove('invalid'));
   if (!form.checkValidity()) {
+    event.preventDefault();
     const firstInvalid = form.querySelector(':invalid');
     firstInvalid?.classList.add('invalid');
     firstInvalid?.focus();
@@ -56,26 +56,6 @@ form?.addEventListener('submit', async (event) => {
     status.textContent = 'Please complete all fields correctly.';
     return;
   }
-
-  form.classList.add('busy');
-  status.className = 'form-status';
-  status.textContent = 'Sending your enquiry…';
-  try {
-    const response = await fetch(form.action, {
-      method: 'POST',
-      body: new FormData(form),
-      headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-      credentials: 'same-origin',
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || 'Unable to send your enquiry.');
-    form.reset();
-    status.className = 'form-status success';
-    status.textContent = data.message;
-  } catch (error) {
-    status.className = 'form-status error';
-    status.textContent = `${error.message || 'Something went wrong.'} You can also call +91 9466667561.`;
-  } finally {
-    form.classList.remove('busy');
-  }
+  status.className = 'form-status success';
+  status.textContent = 'Opening WhatsApp with your enquiry. Review it there, then press Send.';
 });

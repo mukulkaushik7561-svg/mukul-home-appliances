@@ -26,13 +26,13 @@ $env:RATELIMIT_STORAGE_URI = "redis://..." # recommended for multiple workers
 waitress-serve --listen=127.0.0.1:8000 app:app
 ```
 
-Terminate TLS at a trusted reverse proxy, redirect HTTP to HTTPS, restrict and back up the database, and use a managed database plus shared rate-limit store for multiple instances.
+Terminate TLS at a trusted reverse proxy, redirect HTTP to HTTPS, and use a shared rate-limit store for multiple instances.
 
 ## Security included
 
 - CSRF-protected enquiry submissions
 - strict server-side allow-list validation
-- parameterized database queries
+- server-validated, URL-encoded WhatsApp enquiry redirects
 - per-IP request and submission rate limits
 - honeypot spam trap and 16 KB request limit
 - HTTP-only, SameSite cookies with production HTTPS support
@@ -41,7 +41,7 @@ Terminate TLS at a trusted reverse proxy, redirect HTTP to HTTPS, restrict and b
 - trusted-proxy handling only when explicitly enabled
 - production startup blocked when the environment secret is missing
 - generic server errors and no production debug mode
-- minimal enquiry data collection
+- no enquiry persistence; submitted details are used only to prepare the WhatsApp message
 
 No website can be guaranteed impossible to hack. Keep dependencies and the host patched, monitor logs, rotate secrets, and review stored enquiries regularly.
 

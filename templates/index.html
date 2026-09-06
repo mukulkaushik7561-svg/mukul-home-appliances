@@ -68,7 +68,7 @@
     </section>
     <section class="enquiry-section" id="enquiry">
       <div class="enquiry-copy reveal"><p class="kicker">SERVICE ENQUIRY</p><h2>How can we help?</h2><p>Send the basics and we’ll contact you. For urgent help, call us directly.</p><a class="phone-link" href="tel:+919466667561"><small>CALL MUKUL HOME APPLIANCES</small><strong>+91 9466667561</strong></a></div>
-      <form class="enquiry-form reveal" id="enquiryForm" action="{{ url_for('enquiry') }}" method="post" novalidate>
+      <form class="enquiry-form reveal" id="enquiryForm" action="{{ url_for('enquiry') }}" method="post" target="_blank" rel="noopener" novalidate>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><div class="honeypot" aria-hidden="true"><label>Leave this empty<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
         <div class="field-row"><label><span>Your name</span><input name="name" minlength="2" maxlength="80" required autocomplete="name" placeholder="e.g. Rajesh Kumar"></label><label><span>Phone number</span><input name="phone" minlength="7" maxlength="20" required autocomplete="tel" inputmode="tel" placeholder="Your contact number"></label></div>
         <label><span>Service needed</span><select name="service" required><option value="">Select a service</option><option>RO Installation</option><option>RO Service</option><option>AMC / Maintenance</option><option>Support / General Enquiry</option><option>Bio+ Bottle Enquiry</option></select></label>
